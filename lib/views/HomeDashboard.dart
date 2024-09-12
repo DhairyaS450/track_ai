@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:track_ai/data/events.dart';
 import 'package:track_ai/data/tasks.dart';
 import 'package:track_ai/views/ChatBotScreen.dart';
 import 'package:track_ai/views/EditTaskScreen.dart';
@@ -124,7 +125,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                 },
               ),
             ),
-
+            const SizedBox(height: 30),
             InkWell(
               onTap: () {
                 Navigator.push(
@@ -133,7 +134,8 @@ class _HomeDashboardState extends State<HomeDashboard> {
                 );
               },
               child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 20.0),
+                padding: const EdgeInsets.symmetric(
+                    vertical: 10.0, horizontal: 20.0),
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
                     colors: [Colors.purple, Colors.blueAccent],
@@ -210,8 +212,10 @@ class _HomeDashboardState extends State<HomeDashboard> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                              builder: (context) =>
-                                  CalendarView(tasks: todaysTasks)),
+                              builder: (context) => CalendarView(
+                                    tasks: todaysTasks,
+                                    events: events,
+                                  )),
                         );
                       },
                       child: const Text('View Calendar'),
@@ -257,3 +261,69 @@ class _HomeDashboardState extends State<HomeDashboard> {
 
 // Task model
 
+class Task {
+  String name;
+  String startTime;
+  String priority;
+  String? description;
+  bool isCompleted;
+  DateTime? deadline;
+
+  Task({
+    required this.name,
+    required this.startTime,
+    required this.priority,
+    this.description,
+    this.isCompleted = false,
+    required this.deadline,
+  });
+}
+
+final List<Task> todaysTasks = [
+  Task(
+      name: 'Math Homework',
+      startTime: '9:00 AM',
+      priority: 'High',
+      isCompleted: false,
+      deadline: DateTime(2024, 9, 14)),
+  Task(
+      name: 'English Essay',
+      startTime: '11:00 AM',
+      priority: 'Mid',
+      isCompleted: true,
+      deadline: DateTime(2024, 9, 15)),
+  Task(
+      name: 'Science Project',
+      startTime: '2:00 PM',
+      priority: 'Low',
+      isCompleted: false,
+      deadline: DateTime(2024, 9, 15)),
+];
+
+// Event model
+class Event {
+  String name;
+  String description;
+  DateTime date;
+
+  Event({
+    required this.name,
+    required this.description,
+    required this.date,
+  });
+}
+
+List<Event> events = [
+  Event(
+      name: 'Coding Club',
+      description: 'attend at CHCI',
+      date: DateTime(2024, 9, 13, 14, 30)),
+  Event(
+      name: 'Chess Club',
+      description: 'attend at CHCI',
+      date: DateTime(2024, 9, 11, 14, 30)),
+  Event(
+      name: 'YTL Meeting',
+      description: 'Discuss project',
+      date: DateTime(2024, 9, 11, 16, 00))
+];

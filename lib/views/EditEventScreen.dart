@@ -52,7 +52,7 @@ class _EditEventScreenState extends State<EditEventScreen> {
               // Event Name Input
               TextFormField(
                 initialValue: eventName,
-                decoration: InputDecoration(labelText: 'Event Name'),
+                decoration: const InputDecoration(labelText: 'Event Name'),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Please enter an event name';
@@ -65,14 +65,14 @@ class _EditEventScreenState extends State<EditEventScreen> {
               // Description Input
               TextFormField(
                 initialValue: description,
-                decoration: InputDecoration(labelText: 'Description'),
+                decoration: const InputDecoration(labelText: 'Description'),
                 onSaved: (value) => description = value!,
               ),
 
               // Date Picker
               ListTile(
                 title: Text('Date: ${DateFormat.yMMMd().format(eventDate)}'),
-                trailing: Icon(Icons.calendar_today),
+                trailing: const Icon(Icons.calendar_today),
                 onTap: () async {
                   DateTime? picked = await showDatePicker(
                     context: context,
@@ -89,7 +89,7 @@ class _EditEventScreenState extends State<EditEventScreen> {
               ),
 
               // Save Button
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: () {
                   if (_formKey.currentState!.validate()) {
@@ -115,7 +115,7 @@ class _EditEventScreenState extends State<EditEventScreen> {
 
               // Delete Button (if editing an existing event)
               if (widget.event != null) ...[
-                SizedBox(height: 20),
+                const SizedBox(height: 20),
                 TextButton(
                   style: TextButton.styleFrom(foregroundColor: Colors.red),
                   onPressed: () {
@@ -124,14 +124,14 @@ class _EditEventScreenState extends State<EditEventScreen> {
                       context: context,
                       builder: (context) {
                         return AlertDialog(
-                          title: Text('Delete Event'),
-                          content: Text('Are you sure you want to delete this event?'),
+                          title: const Text('Delete Event'),
+                          content: const Text('Are you sure you want to delete this event?'),
                           actions: [
                             TextButton(
                               onPressed: () {
                                 Navigator.pop(context); // Close the dialog
                               },
-                              child: Text('Cancel'),
+                              child: const Text('Cancel'),
                             ),
                             TextButton(
                               onPressed: () {
@@ -139,14 +139,14 @@ class _EditEventScreenState extends State<EditEventScreen> {
                                 Navigator.pop(context); // Close dialog
                                 Navigator.pop(context); // Go back to Calendar view
                               },
-                              child: Text('Delete'),
+                              child: const Text('Delete'),
                             ),
                           ],
                         );
                       },
                     );
                   },
-                  child: Text('Delete Event'),
+                  child: const Text('Delete Event'),
                 ),
               ],
             ],

@@ -3,6 +3,8 @@ import 'package:track_ai/theme.dart';
 import 'package:track_ai/views/CalendarView.dart';
 import 'package:track_ai/views/ChatBotScreen.dart';
 import 'package:track_ai/views/HomeDashboard.dart';
+import 'package:track_ai/views/RatingScreen.dart';
+import 'package:track_ai/views/StudySessionPage.dart';
 
 void main() {
   runApp(const App());
@@ -17,7 +19,7 @@ class App extends StatelessWidget {
       title: 'Track AI',
       theme: theme,
       debugShowCheckedModeBanner: false,
-      home: HomeDashboard(),
+      home: RatingScreen(),
     );
   }
 }

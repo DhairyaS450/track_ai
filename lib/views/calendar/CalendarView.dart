@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:track_ai/test_data/events.dart';
 import 'package:track_ai/test_data/tasks.dart';
-import 'HomeDashboard.dart';
-import 'EditTaskScreen.dart';
-import 'EditEventScreen.dart'; // Import for editing events
+import '../HomeDashboard.dart';
+import '../tasks/EditTaskScreen.dart';
+import '../events/EditEventScreen.dart'; // Import for editing events
 
 class CalendarView extends StatefulWidget {
   final List<Task> tasks;

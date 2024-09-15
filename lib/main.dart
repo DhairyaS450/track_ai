@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:track_ai/theme.dart';
-import 'package:track_ai/views/CalendarView.dart';
-import 'package:track_ai/views/ChatBotScreen.dart';
+import 'package:track_ai/views/calendar/CalendarView.dart';
+import 'package:track_ai/views/chatbot/ChatBotScreen.dart';
 import 'package:track_ai/views/HomeDashboard.dart';
-import 'package:track_ai/views/RatingScreen.dart';
-import 'package:track_ai/views/StudySessionPage.dart';
+import 'package:track_ai/views/rating/RatingScreen.dart';
+import 'package:track_ai/views/study_sessions/StudySessionPage.dart';
 
 void main() {
   runApp(const App());

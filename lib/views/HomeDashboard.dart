@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:track_ai/test_data/events.dart';
 import 'package:track_ai/test_data/tasks.dart';
-import 'package:track_ai/views/ChatBotScreen.dart';
-import 'package:track_ai/views/EditTaskScreen.dart';
-import 'CalendarView.dart'; // Import Calendar View
-import 'AddNewTaskScreen.dart'; // Import Add New Task Screen
+import 'package:track_ai/views/chatbot/ChatBotScreen.dart';
+import 'package:track_ai/views/tasks/EditTaskScreen.dart';
+import 'calendar/CalendarView.dart'; // Import Calendar View
+import 'tasks/AddNewTaskScreen.dart'; // Import Add New Task Screen
 
 class HomeDashboard extends StatefulWidget {
   @override

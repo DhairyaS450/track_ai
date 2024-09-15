@@ -1,7 +1,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:track_ai/test_data/events.dart';
-import 'HomeDashboard.dart'; // Import the Event model
+import '../HomeDashboard.dart'; // Import the Event model
 import 'package:intl/intl.dart'; // For date formatting
 
 class EditEventScreen extends StatefulWidget {

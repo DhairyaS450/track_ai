@@ -6,7 +6,7 @@ final theme = ThemeData(
         
         // Primary app-wide color scheme
         primaryColor: const Color(0xFF0A84FF), // Custom Blue
-        hintColor: const Color(0xFF32D74B), // Custom Green
+        // hintColor: const Color(0xFF32D74B), // Custom Green
         
         // Button styling
         elevatedButtonTheme: ElevatedButtonThemeData(

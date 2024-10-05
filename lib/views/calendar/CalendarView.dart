@@ -1,62 +1,81 @@
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
-import 'package:track_ai/test_data/events.dart';
-import 'package:track_ai/test_data/tasks.dart';
-import '../HomeDashboard.dart';
+import 'package:track_ai/functions/FormatDate.dart';
+import 'package:track_ai/services/auth/auth_service.dart';
+import 'package:track_ai/services/cloud/firestore_database.dart';
 import '../tasks/EditTaskScreen.dart';
 import '../events/EditEventScreen.dart'; // Import for editing events
 
 class CalendarView extends StatefulWidget {
-  final List<Task> tasks;
-  final List<Event> events; // List of events
-
-  CalendarView({required this.tasks, required this.events});
+  const CalendarView({super.key});
 
   @override
   _CalendarViewState createState() => _CalendarViewState();
 }
 
 class _CalendarViewState extends State<CalendarView> {
+  final String uid = AuthService().currentUser!.uid;
+  final FirestoreDatabase _firestoreDatabase = FirestoreDatabase();
+  List<Task> tasks = [];
+  List<Event> events = [];
+
   CalendarFormat _calendarFormat = CalendarFormat.month;
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
 
-List<Task> _getTasksForDay(DateTime day) {
-  return widget.tasks.where((task) {
-    // Match only the date part, ignore time
-    return DateTime(task.deadline!.year, task.deadline!.month, task.deadline!.day) == 
-           DateTime(day.year, day.month, day.day);
-  }).toList();
-}
+  _getTasks() async {
+    tasks = await _firestoreDatabase.fetchTasksFromFirestore(uid);
+  }
 
-List<Event> _getEventsForDay(DateTime day) {
-  return widget.events.where((event) {
-    // Match only the date part, ignore time
-    return DateTime(event.date.year, event.date.month, event.date.day) == 
-           DateTime(day.year, day.month, day.day);
-  }).toList();
-}
+  _getEvents() async {
+    events = await _firestoreDatabase.fetchUserEvents(uid);
+  }
+
+  @override
+  void initState() {
+    _getTasks();
+    _getEvents();
+    super.initState();
+  }
+
+  List<Task> _getTasksForDay(DateTime day) {
+    return tasks.where((task) {
+      // Match only the date part, ignore time
+      return DateTime(
+              task.deadline.year, task.deadline.month, task.deadline.day) ==
+          DateTime(day.year, day.month, day.day);
+    }).toList();
+  }
+
+  List<Event> _getEventsForDay(DateTime day) {
+    return events.where((event) {
+      // Match only the date part, ignore time
+      return DateTime(event.startTime.year, event.startTime.month, event.startTime.day) ==
+          DateTime(day.year, day.month, day.day);
+    }).toList();
+  }
+
   // Add new event
-  void _addNewEvent(Event newEvent) {
+  dynamic _addNewEvent(Event newEvent) {
     setState(() {
-      widget.events.add(newEvent);
+      events.add(newEvent);
     });
   }
 
   // Edit an existing event
-  void _editEvent(Event oldEvent, Event newEvent) {
+  dynamic _editEvent(Event oldEvent, Event newEvent) {
     setState(() {
-      int eventIndex = widget.events.indexOf(oldEvent);
+      int eventIndex = events.indexOf(oldEvent);
       if (eventIndex != -1) {
-        widget.events[eventIndex] = newEvent;
+        events[eventIndex] = newEvent;
       }
     });
   }
 
   // Delete an event
-  void _deleteEvent(Event eventToDelete) {
+  dynamic _deleteEvent(Event eventToDelete) {
     setState(() {
-      widget.events.remove(eventToDelete);
+      events.remove(eventToDelete);
     });
   }
 
@@ -102,7 +121,10 @@ List<Event> _getEventsForDay(DateTime day) {
               List<Task> tasksForDay = _getTasksForDay(day);
               List<Event> eventsForDay = _getEventsForDay(day);
 
-              return [...tasksForDay, ...eventsForDay]; // Combine tasks and events
+              return [
+                ...tasksForDay,
+                ...eventsForDay
+              ]; // Combine tasks and events
             },
             calendarStyle: const CalendarStyle(
               todayDecoration: BoxDecoration(
@@ -123,7 +145,7 @@ List<Event> _getEventsForDay(DateTime day) {
 
           // Display tasks and events for the selected day
           if (_selectedDay != null) ...[
-            const Text('Tasks',
+            const Text('Deadlines',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             Expanded(
                 child: _buildTaskList(
@@ -175,32 +197,32 @@ List<Event> _getEventsForDay(DateTime day) {
             value: task.isCompleted,
             onChanged: (bool? value) {
               setState(() {
-                task.isCompleted = value!;
+                // task.isCompleted = value!;
               });
             },
           ),
           onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => EditTaskScreen(
-                  task: task,
-                  onEditTask: (editedTask) {
-                    setState(() {
-                      int taskIndex = widget.tasks.indexOf(task);
-                      if (taskIndex != -1) {
-                        widget.tasks[taskIndex] = editedTask;
-                      }
-                    });
-                  },
-                  onDeleteTask: (taskToDelete) {
-                    setState(() {
-                      widget.tasks.remove(taskToDelete);
-                    });
-                  },
-                ),
-              ),
-            );
+            // Navigator.push(
+            //   context,
+            //   MaterialPageRoute(
+            //     builder: (context) => EditTaskScreen(
+            //       task: task,
+            //       onEditTask: (editedTask) {
+            //         setState(() {
+            //           int taskIndex = tasks.indexOf(task);
+            //           if (taskIndex != -1) {
+            //             tasks[taskIndex] = editedTask as Task;
+            //           }
+            //         });
+            //       },
+            //       onDeleteTask: (taskToDelete) {
+            //         setState(() {
+            //           tasks.remove(taskToDelete);
+            //         });
+            //       },
+            //     ),
+            //   ),
+            // );
           },
         );
       },
@@ -219,7 +241,7 @@ List<Event> _getEventsForDay(DateTime day) {
         Event event = events[index];
         return ListTile(
           title: Text(event.name),
-          subtitle: Text('${event.date.hour - 12}:${event.date.minute}'),
+          subtitle: Text(formatTimeOfDay(event.startTime)),
           onTap: () {
             Navigator.push(
               context,

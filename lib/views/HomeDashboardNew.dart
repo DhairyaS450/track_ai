@@ -1,98 +1,116 @@
 import 'package:flutter/material.dart';
+import 'package:track_ai/constants/routes.dart';
+import 'package:track_ai/functions/FormatDate.dart';
+import 'package:track_ai/services/auth/auth_service.dart';
+import 'package:track_ai/services/cloud/firestore_database.dart';
+import 'package:track_ai/views/tasks/EditTaskScreen.dart';
 
-class HomeDashboardNew extends StatelessWidget {
-  final List<Task> todaysTasks = [
-    Task(
-      name: 'Math Homework',
-      startTime: '9:00 AM',
-      priority: 'High',
-      deadline: DateTime(2023, 9, 14),
-      isCompleted: false,
-      progress: 0.5, // 50% done
-    ),
-    Task(
-      name: 'Physics Revision',
-      startTime: '11:00 AM',
-      priority: 'Medium',
-      deadline: DateTime(2023, 9, 14),
-      isCompleted: true,
-      progress: 1.0, // Completed
-    ),
-  ];
+class HomeDashboardNew extends StatefulWidget {
+  const HomeDashboardNew({super.key});
 
-  HomeDashboardNew({super.key});
+  @override
+  State<HomeDashboardNew> createState() => _HomeDashboardNewState();
+}
+
+class _HomeDashboardNewState extends State<HomeDashboardNew> {
+  // final List<Task> todaysTasks = [
+  final String uid = AuthService().currentUser!.uid;
+  final FirestoreDatabase _firestoreDatabase = FirestoreDatabase();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
         appBar: AppBar(
-          title: const Text('Today’s Study Plan'),
+          title: const Text('Track AI'),
           backgroundColor: Colors.blueAccent,
         ),
-        body: GestureDetector(
-          onHorizontalDragUpdate: (details) {
-            if (details.delta.dx > 0) {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => StudySessionOverlay()),
-              );
-            }
-          },
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Task Stats Overview
-                _buildTaskStatsOverview(),
-                const SizedBox(height: 20),
+        body: StreamBuilder<List<Task>>(
+            stream: _firestoreDatabase.taskStream(uid),
+            builder: (context, snapshot) {
+              // Handle loading state
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
 
-                // Section: "Your Tasks for Today" with Edit and Calendar Button
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Your Tasks for Today',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.blueAccent,
+              // Handle errors
+              if (snapshot.hasError) {
+                return Center(child: Text('Error: ${snapshot.error}'));
+              }
+
+              // Extract tasks from snapshot
+              List<Task> todaysTasks = snapshot.data!;
+
+              return GestureDetector(
+                // onHorizontalDragUpdate: (details) {
+                //   if (details.delta.dx < 30) {
+                //     Navigator.push(
+                //       context,
+                //       MaterialPageRoute(builder: (context) => StudySessionOverlay()),
+                //     );
+                //   }
+                // },
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Task Stats Overview
+                      _buildTaskStatsOverview(todaysTasks),
+                      const SizedBox(height: 20),
+
+                      // Section: "Your Tasks for Today" with Add Task and Calendar Button
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Your Tasks for Today',
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blueAccent,
+                            ),
+                          ),
+                          Row(
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.add,
+                                    color: Colors.blueAccent),
+                                onPressed: () {
+                                  Navigator.of(context)
+                                      .pushNamed(addNewTaskScreenRoute);
+                                },
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.calendar_today,
+                                    color: Colors.blueAccent),
+                                onPressed: () {
+                                  Navigator.of(context)
+                                      .pushNamed(calendarViewRoute);
+                                },
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
-                    ),
-                    Row(
-                      children: [
-                        IconButton(
-                          icon:
-                              const Icon(Icons.edit, color: Colors.blueAccent),
-                          onPressed: () {
-                            // Logic to edit tasks
-                          },
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.calendar_today,
-                              color: Colors.blueAccent),
-                          onPressed: () {
-                            // Navigate to calendar view
-                          },
-                        ),
-                      ],
-                    ),
-                  ],
+                      const SizedBox(height: 10),
+                      _buildTaskList(todaysTasks),
+                      const SizedBox(height: 30),
+                      _buildDailyMotivation(),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 10),
-                _buildTaskList(),
-                const SizedBox(height: 30),
-                _buildDailyMotivation(),
-              ],
-            ),
-          ),
-        ));
+              );
+            }));
   }
 
   // Task Stats Overview
-  Widget _buildTaskStatsOverview() {
+  Widget _buildTaskStatsOverview(List<Task> todaysTasks) {
     int completedTasks = todaysTasks.where((task) => task.isCompleted).length;
     int totalTasks = todaysTasks.length;
+
+    if (totalTasks == 0) {
+      totalTasks = 1;
+    }
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -132,73 +150,100 @@ class HomeDashboardNew extends StatelessWidget {
   }
 
   // Task List Builder
-  Widget _buildTaskList() {
-    return Column(
-      children: todaysTasks.map((task) => _buildTaskCard(task)).toList(),
+  Widget _buildTaskList(List<Task> todaysTasks) {
+    return SizedBox(
+      height: 300,
+      child: SingleChildScrollView(
+        child: Column(
+          children: todaysTasks.map((task) => _buildTaskCard(task)).toList(),
+        ),
+      ),
     );
   }
 
   // Task Card
   Widget _buildTaskCard(Task task) {
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 10),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-      elevation: 5,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  task.isCompleted
-                      ? Icons.check_circle_outline
-                      : Icons.schedule,
-                  color: task.isCompleted ? Colors.green : Colors.orange,
-                  size: 30,
-                ),
-                const SizedBox(width: 10),
-                Text(
-                  task.name,
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: task.isCompleted ? Colors.green : Colors.black87,
+    return InkWell(
+      onLongPress: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => EditTaskScreen(
+                task: task,
+                onSave: (Task updatedTask) {
+                  _firestoreDatabase.updateTask(
+                      uid, updatedTask.id, updatedTask.toMap());
+                  setState(() {
+                    task = updatedTask;
+                  });
+                },
+                onDelete: () async {
+                  _firestoreDatabase.deleteTask(uid, task.id);
+                }
+            ),
+          ),
+        );
+      },
+      child: Card(
+        margin: const EdgeInsets.symmetric(vertical: 10),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        elevation: 5,
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    task.isCompleted
+                        ? Icons.check_circle_outline
+                        : Icons.schedule,
+                    color: task.isCompleted ? Colors.green : Colors.orange,
+                    size: 30,
                   ),
-                ),
-                const Spacer(),
-                _buildTaskPriorityChip(task.priority),
-              ],
-            ),
-            const SizedBox(height: 10),
-
-            // Task Progress Bar
-            LinearProgressIndicator(
-              value: task.progress,
-              backgroundColor: Colors.grey[300],
-              color: task.isCompleted ? Colors.green : Colors.blueAccent,
-            ),
-            const SizedBox(height: 10),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Start Time: ${task.startTime}',
-                  style: TextStyle(fontSize: 16, color: Colors.grey[700]),
-                ),
-                if (task.isCompleted)
-                  const Text(
-                    'Completed',
+                  const SizedBox(width: 10),
+                  Text(
+                    task.name,
                     style: TextStyle(
-                      fontSize: 16,
+                      fontSize: 20,
                       fontWeight: FontWeight.bold,
-                      color: Colors.green,
+                      color: task.isCompleted ? Colors.green : Colors.black87,
                     ),
                   ),
-              ],
-            ),
-          ],
+                  const Spacer(),
+                  _buildTaskPriorityChip(task.priority),
+                ],
+              ),
+              const SizedBox(height: 10),
+
+              // Task Progress Bar
+              LinearProgressIndicator(
+                value: task.progress,
+                backgroundColor: Colors.grey[300],
+                color: task.isCompleted ? Colors.green : Colors.blueAccent,
+              ),
+              const SizedBox(height: 10),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Start Time: ${formatTimeOfDay(task.startTime)}',
+                    style: TextStyle(fontSize: 16, color: Colors.grey[700]),
+                  ),
+                  if (task.isCompleted)
+                    const Text(
+                      'Completed',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green,
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -293,7 +338,7 @@ Widget _buildCircularCountdownTimer() {
         alignment: Alignment.center,
         children: [
           const SizedBox(height: 20),
-          Container(
+          SizedBox(
             width: 150,
             height: 150,
             child: CircularProgressIndicator(
@@ -451,23 +496,4 @@ Widget _buildChatbotInputField() {
       ),
     ),
   );
-}
-
-// Task Model
-class Task {
-  final String name;
-  final String startTime;
-  final String priority;
-  final DateTime deadline;
-  final bool isCompleted;
-  final double progress;
-
-  Task({
-    required this.name,
-    required this.startTime,
-    required this.priority,
-    required this.deadline,
-    required this.isCompleted,
-    required this.progress,
-  });
 }

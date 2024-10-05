@@ -1,33 +1,123 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
-import 'package:track_ai/test_data/tasks.dart';
-import '../HomeDashboard.dart';
-import 'package:intl/intl.dart'; // For date formatting
+import 'package:track_ai/constants/routes.dart';
+import 'package:track_ai/services/cloud/firestore_database.dart';
+import 'package:track_ai/utilities/dialogs/delete_dialog.dart';
 
 class EditTaskScreen extends StatefulWidget {
   final Task task;
-  final Function(Task) onEditTask;
-  final Function(Task) onDeleteTask;
+  final Function onSave;
+  final Function onDelete;
 
-  const EditTaskScreen({required this.task, required this.onEditTask, required this.onDeleteTask,});
+  const EditTaskScreen({super.key, required this.task, required this.onSave, required this.onDelete});
 
   @override
   _EditTaskScreenState createState() => _EditTaskScreenState();
 }
 
 class _EditTaskScreenState extends State<EditTaskScreen> {
-  final _formKey = GlobalKey<FormState>();
-  late String taskName;
-  late String description;
-  late String priority;
-  late DateTime deadline;
+  // Controllers for text fields
+  late TextEditingController _taskNameController;
+  late TextEditingController _descriptionController;
+
+  // Variables to hold edited values
+  DateTime? _startTime;
+  DateTime? _endTime;
+  DateTime? _deadline;
+  String _selectedPriority = 'Low';
+  double _progress = 0.0;
+  bool _isCompleted = false;
 
   @override
   void initState() {
     super.initState();
-    taskName = widget.task.name;
-    description = widget.task.description ?? "";
-    priority = widget.task.priority;
-    deadline = widget.task.deadline!;
+
+    // Initialize controllers with existing task values
+    _taskNameController = TextEditingController(text: widget.task.name);
+    _descriptionController =
+        TextEditingController(text: widget.task.description ?? '');
+
+    // Set initial values for other fields
+    _startTime = widget.task.startTime;
+    _endTime = widget.task.endTime;
+    _deadline = widget.task.deadline;
+    _selectedPriority = widget.task.priority;
+    _progress = widget.task.progress;
+    _isCompleted = widget.task.isCompleted;
+  }
+
+  @override
+  void dispose() {
+    // Dispose controllers when not needed
+    _taskNameController.dispose();
+    _descriptionController.dispose();
+    super.dispose();
+  }
+
+  // Method to pick deadline date
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime initialDate =
+        _deadline != null && _deadline!.isAfter(DateTime.now())
+            ? _deadline!
+            : DateTime.now();
+
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: initialDate, // Ensure initialDate is never before firstDate
+      firstDate: DateTime.now(),
+      lastDate: DateTime(2101),
+    );
+
+    if (picked != null) {
+      setState(() {
+        _deadline = picked;
+      });
+    }
+  }
+
+// Method to pick both date and time
+  Future<void> _selectDateTime(BuildContext context, int field) async {
+    // Step 1: Pick Date
+    DateTime? pickedDate = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime.now(),
+      lastDate: DateTime(2101),
+    );
+
+    if (pickedDate == null) {
+      return; // User canceled the date picker
+    }
+
+    // Step 2: Pick Time
+    TimeOfDay? pickedTime = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.now(),
+    );
+
+    if (pickedTime == null) {
+      return; // User canceled the time picker
+    }
+
+    // Combine the picked date and time into a DateTime object
+    DateTime pickedDateTime = DateTime(
+      pickedDate.year,
+      pickedDate.month,
+      pickedDate.day,
+      pickedTime.hour,
+      pickedTime.minute,
+    );
+
+    setState(() {
+      if (field == 0) {
+        _startTime = pickedDateTime;
+      } else if (field == 1) {
+        _endTime = pickedDateTime;
+      } else if (field == 2) {
+        _deadline = pickedDateTime;
+      }
+    });
   }
 
   @override
@@ -35,139 +125,238 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Edit Task'),
+        backgroundColor: Colors.blueAccent,
+        actions: [
+          IconButton(
+            onPressed: () async {
+              final delete = await showDeleteDialog(context);
+              if (delete) {
+                widget.onDelete();
+                Navigator.pushNamed(context, homeDashboardNewRoute);
+              }
+            },
+            icon: const Icon(Icons.delete, color: Colors.red),
+            iconSize: 40,
+          )
+        ],
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: ListView(
-            children: [
-              // Task Name Input
-              TextFormField(
-                initialValue: taskName,
-                decoration: const InputDecoration(labelText: 'Task Name'),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter a task name';
-                  }
-                  return null;
-                },
-                onSaved: (value) => taskName = value!,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Task Name
+            _buildTextInputField('Task Name', Icons.title, _taskNameController),
+            const SizedBox(height: 20),
+
+            // Description
+            _buildTextInputField(
+                'Brief Description', Icons.description, _descriptionController),
+            const SizedBox(height: 20),
+
+            // Start Time
+            _buildTimePicker('Start Time', _startTime, 0),
+            const SizedBox(height: 20),
+
+            // End Time
+            _buildTimePicker('End Time', _endTime, 1),
+            const SizedBox(height: 20),
+
+            // Deadline
+            _buildTimePicker('Deadline', _deadline, 2),
+            const SizedBox(height: 20),
+
+            // Priority
+            const Text(
+              'Priority',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.blueAccent,
               ),
-              
-              // Description Input
-              TextFormField(
-                initialValue: description,
-                decoration: const InputDecoration(labelText: 'Description'),
-                onSaved: (value) => description = value!,
+            ),
+            const SizedBox(height: 10),
+            _buildPrioritySelector(),
+            const SizedBox(height: 20),
+
+            // Progress Slider
+            const Text(
+              'Progress',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.blueAccent,
               ),
-              
-              // Priority Dropdown
-              DropdownButtonFormField<String>(
-                value: priority,
-                decoration: const InputDecoration(labelText: 'Priority'),
-                items: ['High', 'Mid', 'Low']
-                    .map((level) => DropdownMenuItem(
-                          child: Text(level),
-                          value: level,
-                        ))
-                    .toList(),
-                onChanged: (value) {
-                  setState(() {
-                    priority = value!;
-                  });
-                },
-              ),
-              
-              // Deadline Picker
-              ListTile(
-                title: Text('Deadline: ${DateFormat.yMMMd().format(deadline)}'),
-                trailing: const Icon(Icons.calendar_today),
-                onTap: () async {
-                  DateTime? picked = await showDatePicker(
-                    context: context,
-                    initialDate: deadline,
-                    firstDate: DateTime.now(),
-                    lastDate: DateTime(2100),
-                  );
-                  if (picked != null) {
+            ),
+            Slider(
+              value: _progress,
+              min: 0.0,
+              max: 100.0,
+              divisions: 100,
+              label: '${_progress.toInt()}%',
+              onChanged: (double value) {
+                setState(() {
+                  _progress = value;
+                });
+              },
+            ),
+            const SizedBox(height: 20),
+
+            // Is Completed Checkbox
+            Row(
+              children: [
+                Checkbox(
+                  value: _isCompleted,
+                  onChanged: (bool? value) {
                     setState(() {
-                      deadline = picked;
+                      _isCompleted = value ?? false;
+                      if (_isCompleted) {
+                        _progress = 100;
+                      }
                     });
-                  }
-                },
-              ),
-              
-              // Submit Button
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: () {
-                  if (_formKey.currentState!.validate()) {
-                    _formKey.currentState!.save();
-
-                    // Update the task with new values
-                    Task editedTask = Task(
-                      name: taskName,
-                      description: description,
-                      priority: priority,
-                      deadline: deadline,
-                      isCompleted: widget.task.isCompleted,
-                      startTime: widget.task.startTime, // Keep start time unchanged
-                    );
-
-                    // Pass the edited task back to the parent
-                    widget.onEditTask(editedTask);
-
-                    // Go back to the previous screen
-                    Navigator.pop(context);
-                  }
-                },
-                child: const Text('Save Changes'),
-              ),
-
-              // Delete Button
-              const SizedBox(height: 20),
-              TextButton(
-                style: TextButton.styleFrom(
-                  foregroundColor: Colors.red,
+                  },
                 ),
-                onPressed: () {
-                  // Confirm before deleting
-                  showDialog(
-                    context: context,
-                    builder: (context) {
-                      return AlertDialog(
-                        title: const Text('Delete Task'),
-                        content: const Text('Are you sure you want to delete this task?'),
-                        actions: [
-                          TextButton(
-                            onPressed: () {
-                              Navigator.pop(context); // Close the dialog
-                            },
-                            child: const Text('Cancel'),
-                          ),
-                          TextButton(
-                            onPressed: () {
-                              // Delete the task
-                              widget.onDeleteTask(widget.task);
+                const Text(
+                  'Completed?',
+                  style: TextStyle(fontSize: 18, color: Colors.blueAccent),
+                ),
+              ],
+            ),
+            const SizedBox(height: 30),
 
-                              // Close the dialog and go back to the previous screen
-                              Navigator.pop(context); // Close the dialog
-                              Navigator.pop(context); // Close the edit screen
-                            },
-                            child: const Text('Delete'),
-                          ),
-                        ],
-                      );
-                    },
-                  );
+            // Save Button
+            Center(
+              child: ElevatedButton(
+                onPressed: () {
+                  // Create a new task object with the edited values
+                  final Task updatedTask = Task.fromSnapshot({
+                    'id': widget.task.id,
+                    'name': _taskNameController.text,
+                    'startTime': _startTime,
+                    'endTime': _endTime,
+                    'priority': _selectedPriority,
+                    'description': _descriptionController.text,
+                    'deadline': _deadline!,
+                    'isCompleted': _isCompleted,
+                    'progress': _progress / 100,
+                  });
+
+                  // Call the onSave callback to save the edited task
+                  widget.onSave(updatedTask);
+                  Navigator.pop(context);
                 },
-                child: const Text('Delete Task'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blueAccent,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 50, vertical: 15),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                ),
+                child: const Text(
+                  'Save Changes',
+                  style: TextStyle(fontSize: 18),
+                ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
+    );
+  }
+
+  // Text Input Field Widget
+  Widget _buildTextInputField(
+      String hint, IconData icon, TextEditingController controller) {
+    return TextField(
+      controller: controller,
+      decoration: InputDecoration(
+        hintText: hint,
+        prefixIcon: Icon(icon, color: Colors.blueAccent),
+        filled: true,
+        fillColor: Colors.grey[100],
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(15),
+          borderSide: BorderSide.none,
+        ),
+      ),
+    );
+  }
+
+  // Update the Time Picker widget to use the new date and time selection
+  Widget _buildTimePicker(String label, DateTime? dateTime, int field) {
+    return GestureDetector(
+      onTap: () => _selectDateTime(context, field),
+      child: Container(
+        padding: EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.grey[100],
+          borderRadius: BorderRadius.circular(15),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              dateTime == null
+                  ? label
+                  : '${dateTime.day}/${dateTime.month}/${dateTime.year} ${TimeOfDay.fromDateTime(dateTime).format(context)}',
+              style: TextStyle(fontSize: 16, color: Colors.blueAccent),
+            ),
+            Icon(Icons.access_time, color: Colors.blueAccent),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Date Picker Widget
+  Widget _buildDatePicker(String label, DateTime? date) {
+    return GestureDetector(
+      onTap: () => _selectDate(context),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.grey[100],
+          borderRadius: BorderRadius.circular(15),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              date == null ? label : '${date.day}/${date.month}/${date.year}',
+              style: const TextStyle(fontSize: 16, color: Colors.blueAccent),
+            ),
+            const Icon(Icons.calendar_today, color: Colors.blueAccent),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Priority Selector Widget
+  Widget _buildPrioritySelector() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        _buildPriorityChip('High', Colors.red),
+        _buildPriorityChip('Mid', Colors.orange),
+        _buildPriorityChip('Low', Colors.green),
+      ],
+    );
+  }
+
+  // Priority Chip Widget
+  Widget _buildPriorityChip(String priority, Color color) {
+    return ChoiceChip(
+      label: Text(priority, style: const TextStyle(color: Colors.white)),
+      selected: _selectedPriority == priority,
+      onSelected: (bool selected) {
+        setState(() {
+          _selectedPriority = priority;
+        });
+      },
+      selectedColor: color,
+      backgroundColor: color.withOpacity(0.5),
     );
   }
 }

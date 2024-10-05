@@ -1,8 +1,7 @@
 
 import 'package:flutter/material.dart';
-import 'package:track_ai/test_data/events.dart';
-import '../HomeDashboard.dart'; // Import the Event model
-import 'package:intl/intl.dart'; // For date formatting
+import 'package:intl/intl.dart';
+import 'package:track_ai/services/cloud/firestore_database.dart'; // For date formatting
 
 class EditEventScreen extends StatefulWidget {
   final Event? event;
@@ -11,7 +10,7 @@ class EditEventScreen extends StatefulWidget {
   final Function(Event)? onEditEvent;
   final Function(Event)? onDeleteEvent;
 
-  EditEventScreen({
+  const EditEventScreen({super.key, 
     this.event,
     this.date,
     required this.onAddEvent,
@@ -34,7 +33,7 @@ class _EditEventScreenState extends State<EditEventScreen> {
     super.initState();
     eventName = widget.event?.name ?? '';
     description = widget.event?.description ?? '';
-    eventDate = widget.event?.date ?? widget.date!;
+    eventDate = widget.event?.startTime ?? widget.date!;
   }
 
   @override
@@ -76,7 +75,6 @@ class _EditEventScreenState extends State<EditEventScreen> {
                 onTap: () async {
                   DateTime? picked = await showDatePicker(
                     context: context,
-                    initialDate: eventDate,
                     firstDate: DateTime.now(),
                     lastDate: DateTime(2100),
                   );
@@ -98,7 +96,8 @@ class _EditEventScreenState extends State<EditEventScreen> {
                     Event newEvent = Event(
                       name: eventName,
                       description: description,
-                      date: eventDate,
+                      startTime: eventDate,
+                      endTime: eventDate
                     );
 
                     if (widget.event != null) {

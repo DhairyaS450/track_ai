@@ -1,118 +1,270 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
-import 'package:track_ai/test_data/tasks.dart';
-import '../HomeDashboard.dart';
-import 'package:intl/intl.dart'; // For date formatting
+import 'package:track_ai/constants/routes.dart';
+import 'package:track_ai/services/auth/auth_service.dart';
+import 'package:track_ai/services/cloud/firestore_database.dart';
+import 'package:track_ai/utilities/dialogs/error_dialog.dart';
 
 class AddNewTaskScreen extends StatefulWidget {
-  final Function(Task) onAddTask; // Callback to add task
-
-  AddNewTaskScreen({required this.onAddTask});
-
+  const AddNewTaskScreen({super.key});
+  
   @override
-  _AddNewTaskScreenState createState() => _AddNewTaskScreenState();
+  State<AddNewTaskScreen> createState() => _AddNewTaskScreenState();
 }
 
 class _AddNewTaskScreenState extends State<AddNewTaskScreen> {
-  final _formKey = GlobalKey<FormState>();
-  String taskName = '';
-  String description = '';
-  String priority = 'Mid'; // Default priority
-  DateTime? deadline = DateTime.now();
+  // Controllers
+  final TextEditingController _taskNameController = TextEditingController();
+  final TextEditingController _descriptionController = TextEditingController();
+
+  // Variables for storing selected values
+  TimeOfDay? _startTime;
+  TimeOfDay? _endTime;
+  DateTime? _deadline;
+  String _selectedPriority = 'Mid';
+
+  final FirestoreDatabase _firestoreDatabase = FirestoreDatabase();
+  final String uid = AuthService().currentUser!.uid;
+
+  @override
+  void dispose() {
+    _taskNameController.dispose();
+    _descriptionController.dispose();
+    super.dispose();
+  }
+
+  // Method to pick time
+  Future<void> _selectTime(BuildContext context, bool isStartTime) async {
+    final TimeOfDay? picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.now(),
+    );
+
+    if (picked != null) {
+      setState(() {
+        if (isStartTime) {
+          _startTime = picked;
+        } else {
+          _endTime = picked;
+        }
+      });
+    }
+  }
+
+  // Method to pick deadline date
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime.now(),
+      lastDate: DateTime(2101),
+    );
+
+    if (picked != null) {
+      setState(() {
+        _deadline = picked;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Add New Task'),
+        backgroundColor: Colors.blueAccent,
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: ListView(
-            children: [
-              // Task Name Input
-              TextFormField(
-                decoration: const InputDecoration(labelText: 'Task Name'),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter a task name';
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Task Name
+            _buildTextInputField('Task Name', Icons.title, _taskNameController),
+            const SizedBox(height: 20),
+
+            // Description
+            _buildTextInputField('Brief Description', Icons.description, _descriptionController),
+            const SizedBox(height: 20),
+
+            // Start Time
+            _buildTimePicker('Start Time', _startTime, true),
+            const SizedBox(height: 20),
+
+            // End Time
+            _buildTimePicker('End Time', _endTime, false),
+            const SizedBox(height: 20),
+
+            // Deadline
+            _buildDatePicker('Deadline', _deadline),
+            const SizedBox(height: 20),
+
+            // Priority
+            const Text(
+              'Priority',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.blueAccent,
+              ),
+            ),
+            const SizedBox(height: 10),
+            _buildPrioritySelector(),
+            const SizedBox(height: 30),
+
+            // Save Button
+            Center(
+              child: ElevatedButton(
+                onPressed: () async {
+                  final now = DateTime.now();
+                  DateTime? startTimeDate;
+                  DateTime? endTimeDate;
+
+                  if (_startTime != null) {
+                    startTimeDate = DateTime(now.year, now.month, now.day, _startTime!.hour, _startTime!.minute);
                   }
-                  return null;
-                },
-                onSaved: (value) => taskName = value!,
-              ),
-              
-              // Description Input
-              TextFormField(
-                decoration: const InputDecoration(labelText: 'Description'),
-                onSaved: (value) => description = value!,
-              ),
-              
-              // Priority Dropdown
-              DropdownButtonFormField<String>(
-                decoration: const InputDecoration(labelText: 'Priority'),
-                value: priority,
-                items: ['High', 'Mid', 'Low']
-                    .map((level) => DropdownMenuItem(
-                          child: Text(level),
-                          value: level,
-                        ))
-                    .toList(),
-                onChanged: (value) {
-                  setState(() {
-                    priority = value!;
+
+                  if (_endTime != null) {
+                    endTimeDate = DateTime(now.year, now.month, now.day, _endTime!.hour, _endTime!.minute);
+                  }
+
+                  if (_deadline == null) {
+                    await showErrorDialog(context, 'Deadline must be entered');
+                    return;
+                  } else if (_taskNameController.text.isEmpty) {
+                    await showErrorDialog(context, 'Please enter a task name');
+                    return;
+                  }
+                  // Handle task creation logic here
+                  log('Task Name: ${_taskNameController.text}');
+                  log('Description: ${_descriptionController.text}');
+                  log('Start Time: $startTimeDate');
+                  log('End Time: $endTimeDate');
+                  log('Deadline: $_deadline');
+                  log('Priority: $_selectedPriority');
+
+                  _firestoreDatabase.addTask(uid, {
+                    "name": _taskNameController.text,
+                    "description": _descriptionController.text,
+                    "startTime": startTimeDate,
+                    "endTime": endTimeDate,
+                    "deadline": _deadline,
+                    "priority": _selectedPriority,
+                    "isCompleted": false,
+                    "progress": 0.0
                   });
-                },
-              ),
-              
-              // Deadline Picker
-              ListTile(
-                title: Text('Deadline: ${DateFormat.yMMMd().format(deadline!)}'),
-                trailing: const Icon(Icons.calendar_today),
-                onTap: () async {
-                  DateTime? picked = await showDatePicker(
-                    context: context,
-                    firstDate: DateTime.now(),
-                    lastDate: DateTime(2100),
-                  );
-                  if (picked != null) {
-                    setState(() {
-                      deadline = picked;
-                    });
-                  }
-                },
-              ),
-              
-              // Submit Button
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: () {
-                  if (_formKey.currentState!.validate()) {
-                    _formKey.currentState!.save();
 
-                    // Create a new Task object
-                    Task newTask = Task(
-                      name: taskName,
-                      startTime: 'Anytime', // Default time
-                      priority: priority,
-                      deadline: deadline!,
-                      isCompleted: false,
-                    );
-
-                    // Pass the new task back to the parent
-                    widget.onAddTask(newTask);
-
-                    // Go back to the previous screen
-                    Navigator.pop(context);
-                  }
+                  Navigator.of(context).pushNamed(homeDashboardNewRoute);
                 },
-                child: const Text('Add Task'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blueAccent,
+                  padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 15),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                ),
+                child: const Text(
+                  'Save Task',
+                  style: TextStyle(fontSize: 18),
+                ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
+    );
+  }
+
+  // Text Input Field Widget
+  Widget _buildTextInputField(String hint, IconData icon, TextEditingController controller) {
+    return TextField(
+      controller: controller,
+      decoration: InputDecoration(
+        hintText: hint,
+        prefixIcon: Icon(icon, color: Colors.blueAccent),
+        filled: true,
+        fillColor: Colors.grey[100],
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(15),
+          borderSide: BorderSide.none,
+        ),
+      ),
+    );
+  }
+
+  // Time Picker Widget
+  Widget _buildTimePicker(String label, TimeOfDay? time, bool isStartTime) {
+    return GestureDetector(
+      onTap: () => _selectTime(context, isStartTime),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.grey[100],
+          borderRadius: BorderRadius.circular(15),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              time == null ? label : time.format(context),
+              style: const TextStyle(fontSize: 16, color: Colors.blueAccent),
+            ),
+            const Icon(Icons.access_time, color: Colors.blueAccent),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Date Picker Widget
+  Widget _buildDatePicker(String label, DateTime? date) {
+    return GestureDetector(
+      onTap: () => _selectDate(context),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.grey[100],
+          borderRadius: BorderRadius.circular(15),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              date == null ? label : '${date.day}/${date.month}/${date.year}',
+              style: const TextStyle(fontSize: 16, color: Colors.blueAccent),
+            ),
+            const Icon(Icons.calendar_today, color: Colors.blueAccent),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Priority Selector Widget
+  Widget _buildPrioritySelector() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        _buildPriorityChip('High', Colors.red),
+        _buildPriorityChip('Mid', Colors.orange),
+        _buildPriorityChip('Low', Colors.green),
+      ],
+    );
+  }
+
+  // Priority Chip Widget
+  Widget _buildPriorityChip(String priority, Color color) {
+    return ChoiceChip(
+      label: Text(priority, style: const TextStyle(color: Colors.white)),
+      selected: _selectedPriority == priority,
+      onSelected: (bool selected) {
+        setState(() {
+          _selectedPriority = priority;
+        });
+      },
+      selectedColor: color,
+      backgroundColor: color.withOpacity(0.5),
     );
   }
 }

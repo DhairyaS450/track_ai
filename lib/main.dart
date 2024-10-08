@@ -2,8 +2,6 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:track_ai/constants/routes.dart';
 import 'package:track_ai/theme.dart';
-import 'package:track_ai/views/HomeDashboard.dart';
-import 'package:track_ai/views/HomeDashboardNew.dart';
 import 'package:track_ai/views/login-register/LoginPage.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

@@ -19,8 +19,8 @@ class _AddNewTaskScreenState extends State<AddNewTaskScreen> {
   final TextEditingController _descriptionController = TextEditingController();
 
   // Variables for storing selected values
-  TimeOfDay? _startTime;
-  TimeOfDay? _endTime;
+  DateTime? _startTime;
+  DateTime? _endTime;
   DateTime? _deadline;
   String _selectedPriority = 'Mid';
 
@@ -34,23 +34,51 @@ class _AddNewTaskScreenState extends State<AddNewTaskScreen> {
     super.dispose();
   }
 
-  // Method to pick time
-  Future<void> _selectTime(BuildContext context, bool isStartTime) async {
-    final TimeOfDay? picked = await showTimePicker(
+
+// Method to pick both date and time
+  Future<void> _selectDateTime(BuildContext context, int field) async {
+    // Step 1: Pick Date
+    DateTime? pickedDate = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime.now(),
+      lastDate: DateTime(2101),
+    );
+
+    if (pickedDate == null) {
+      return; // User canceled the date picker
+    }
+
+    // Step 2: Pick Time
+    TimeOfDay? pickedTime = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.now(),
     );
 
-    if (picked != null) {
-      setState(() {
-        if (isStartTime) {
-          _startTime = picked;
-        } else {
-          _endTime = picked;
-        }
-      });
+    if (pickedTime == null) {
+      return; // User canceled the time picker
     }
+
+    // Combine the picked date and time into a DateTime object
+    DateTime pickedDateTime = DateTime(
+      pickedDate.year,
+      pickedDate.month,
+      pickedDate.day,
+      pickedTime.hour,
+      pickedTime.minute,
+    );
+
+    setState(() {
+      if (field == 0) {
+        _startTime = pickedDateTime;
+      } else if (field == 1) {
+        _endTime = pickedDateTime;
+      } else if (field == 2) {
+        _deadline = pickedDateTime;
+      }
+    });
   }
+
 
   // Method to pick deadline date
   Future<void> _selectDate(BuildContext context) async {
@@ -89,15 +117,15 @@ class _AddNewTaskScreenState extends State<AddNewTaskScreen> {
             const SizedBox(height: 20),
 
             // Start Time
-            _buildTimePicker('Start Time', _startTime, true),
+            _buildTimePicker('Start Time', _startTime, 0),
             const SizedBox(height: 20),
 
             // End Time
-            _buildTimePicker('End Time', _endTime, false),
+            _buildTimePicker('End Time', _endTime, 1),
             const SizedBox(height: 20),
 
             // Deadline
-            _buildDatePicker('Deadline', _deadline),
+            _buildTimePicker('Deadline', _deadline, 2),
             const SizedBox(height: 20),
 
             // Priority
@@ -193,12 +221,12 @@ class _AddNewTaskScreenState extends State<AddNewTaskScreen> {
     );
   }
 
-  // Time Picker Widget
-  Widget _buildTimePicker(String label, TimeOfDay? time, bool isStartTime) {
+  // Update the Time Picker widget to use the new date and time selection
+  Widget _buildTimePicker(String label, DateTime? dateTime, int field) {
     return GestureDetector(
-      onTap: () => _selectTime(context, isStartTime),
+      onTap: () => _selectDateTime(context, field),
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: Colors.grey[100],
           borderRadius: BorderRadius.circular(15),
@@ -207,16 +235,17 @@ class _AddNewTaskScreenState extends State<AddNewTaskScreen> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              time == null ? label : time.format(context),
-              style: const TextStyle(fontSize: 16, color: Colors.blueAccent),
+              dateTime == null
+                  ? label
+                  : '${dateTime.day}/${dateTime.month}/${dateTime.year} ${TimeOfDay.fromDateTime(dateTime).format(context)}',
+              style: TextStyle(fontSize: 16, color: Colors.blueAccent),
             ),
-            const Icon(Icons.access_time, color: Colors.blueAccent),
+            Icon(Icons.access_time, color: Colors.blueAccent),
           ],
         ),
       ),
     );
   }
-
   // Date Picker Widget
   Widget _buildDatePicker(String label, DateTime? date) {
     return GestureDetector(

@@ -86,6 +86,38 @@ class FirestoreDatabase {
       return [];
     }
   }
+  
+  Future<List<Event>> fetchUserEvents(String userId) async {
+    try {
+      // Fetch user info to get the event references
+      Map<String, dynamic>? userInfo = await getUserInfo(userId);
+
+      if (userInfo == null || userInfo['events'] == null) {
+        log("No events found for user.");
+        return [];
+      }
+
+      List<Event> events = [];
+      List<DocumentReference> eventRefs =
+          List<DocumentReference>.from(userInfo['events']);
+
+      // Fetch each event's details
+      for (var eventRef in eventRefs) {
+        DocumentSnapshot eventDoc = await eventRef.get();
+        if (eventDoc.exists) {
+          events
+              .add(Event.fromSnapshot(eventDoc.data() as Map<String, dynamic>));
+        } else {
+          log("Event not found: ${eventRef.id}");
+        }
+      }
+      return events;
+    } catch (e) {
+      log("Error fetching events: $e");
+      return [];
+    }
+  }
+
 
   // Stream to fetch tasks from Firestore in real-time
   Stream<List<Task>> taskStream(String uid) {
@@ -106,6 +138,31 @@ class FirestoreDatabase {
         }));
 
         return tasks;
+      } else {
+        return [];
+      }
+    });
+  }
+
+  // Stream to fetch events from Firestore in real-time
+  Stream<List<Event>> eventStream(String uid) {
+    return _firestore
+        .collection('users')
+        .doc(uid)
+        .snapshots()
+        .asyncMap((userSnapshot) async {
+      if (userSnapshot.exists && userSnapshot.data() != null) {
+        List<dynamic> eventReferences = userSnapshot.data()!['events'] ?? [];
+        List<DocumentReference<Map<String, dynamic>>> eventRefs =
+            eventReferences.cast<DocumentReference<Map<String, dynamic>>>();
+
+        // Fetch each event snapshot using the list of document references
+        List<Event> events = await Future.wait(eventRefs.map((ref) async {
+          DocumentSnapshot<Map<String, dynamic>> eventSnapshot = await ref.get();
+          return Event.fromSnapshot(eventSnapshot.data()!);
+        }));
+
+        return events;
       } else {
         return [];
       }
@@ -220,37 +277,6 @@ class FirestoreDatabase {
       if (e is FirebaseException) {
         log("Firebase error code: ${e.code}");
       }
-    }
-  }
-
-  Future<List<Event>> fetchUserEvents(String userId) async {
-    try {
-      // Fetch user info to get the event references
-      Map<String, dynamic>? userInfo = await getUserInfo(userId);
-
-      if (userInfo == null || userInfo['events'] == null) {
-        log("No events found for user.");
-        return [];
-      }
-
-      List<Event> events = [];
-      List<DocumentReference> eventRefs =
-          List<DocumentReference>.from(userInfo['events']);
-
-      // Fetch each event's details
-      for (var eventRef in eventRefs) {
-        DocumentSnapshot eventDoc = await eventRef.get();
-        if (eventDoc.exists) {
-          events
-              .add(Event.fromSnapshot(eventDoc.data() as Map<String, dynamic>));
-        } else {
-          log("Event not found: ${eventRef.id}");
-        }
-      }
-      return events;
-    } catch (e) {
-      log("Error fetching events: $e");
-      return [];
     }
   }
 

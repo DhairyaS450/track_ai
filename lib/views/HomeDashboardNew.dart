@@ -179,8 +179,7 @@ class _HomeDashboardNewState extends State<HomeDashboardNew> {
                 },
                 onDelete: () async {
                   _firestoreDatabase.deleteTask(uid, task.id);
-                }
-            ),
+                }),
           ),
         );
       },
@@ -203,12 +202,18 @@ class _HomeDashboardNewState extends State<HomeDashboardNew> {
                     size: 30,
                   ),
                   const SizedBox(width: 10),
-                  Text(
-                    task.name,
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: task.isCompleted ? Colors.green : Colors.black87,
+                  SizedBox(
+                    width: 200,
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Text(
+                        task.name,
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: task.isCompleted ? Colors.green : Colors.black87,
+                        ),
+                      ),
                     ),
                   ),
                   const Spacer(),

@@ -294,12 +294,18 @@ class FirestoreDatabase {
       DocumentReference eventRef =
           await _firestore.collection('events').add(eventData);
 
+      // Get the auto-generated document ID
+      String eventId = eventRef.id;
+
+      // Update the task document with its own ID
+      await eventRef.update({'id': eventId});
+
       // Update the user's events array with the new event reference
       await _usersCollection.doc(userId).update({
         'events': FieldValue.arrayUnion([eventRef])
       });
 
-      log("Event added successfully.");
+      log("Event added successfully with ID: $eventId");
     } catch (e) {
       log("Error adding event: $e");
       if (e is FirebaseException) {
@@ -459,24 +465,45 @@ class Task {
 
 // Event model
 class Event {
+  final String id;
   final String name;
   final String description;
   final DateTime startTime;
   final DateTime endTime;
+  final String priority;
 
   Event({
+    required this.id,
     required this.name,
     required this.description,
     required this.startTime,
     required this.endTime,
+    required this.priority
   });
 
   factory Event.fromSnapshot(Map<String, dynamic> snapshot) {
     return Event(
+      id: snapshot['id'],
       name: snapshot["name"] ?? '',
       description: snapshot['description'] ?? '',
-      startTime: (snapshot['startTime'] as Timestamp).toDate(),
-      endTime: (snapshot['endTime'] as Timestamp).toDate(),
+      startTime: snapshot['startTime'] is Timestamp
+          ? snapshot['startTime'].toDate()
+          : snapshot['startTime'],
+      endTime: snapshot['endTime'] is Timestamp
+          ? snapshot['endTime'].toDate()
+          : snapshot['endTime'],
+      priority: snapshot['priority'] ?? 'Low'
     );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'name': name,
+      'description': description,
+      'startTime': Timestamp.fromDate(startTime),
+      'endTime': Timestamp.fromDate(endTime),
+      'priority': priority
+    };
   }
 }

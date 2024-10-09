@@ -1,53 +1,31 @@
 import 'dart:developer';
 import 'package:flutter/material.dart';
-import 'package:track_ai/constants/routes.dart';
+import 'package:track_ai/services/auth/auth_service.dart';
 import 'package:track_ai/services/cloud/firestore_database.dart';
-import 'package:track_ai/utilities/dialogs/delete_dialog.dart';
+import 'package:track_ai/utilities/dialogs/error_dialog.dart';
 
-class EditEventScreen extends StatefulWidget {
-  final Event event;
-  final Function onSave;
-  final Function onDelete;
-
-  const EditEventScreen({
-    super.key,
-    required this.event,
-    required this.onSave,
-    required this.onDelete,
-  });
-
+class AddNewEventScreen extends StatefulWidget {
+  const AddNewEventScreen({super.key});
+  
   @override
-  _EditEventScreenState createState() => _EditEventScreenState();
+  State<AddNewEventScreen> createState() => _AddNewEventScreenState();
 }
 
-class _EditEventScreenState extends State<EditEventScreen> {
-  // Controllers for text fields
-  late TextEditingController _eventNameController;
-  late TextEditingController _descriptionController;
+class _AddNewEventScreenState extends State<AddNewEventScreen> {
+  // Controllers
+  final TextEditingController _eventNameController = TextEditingController();
+  final TextEditingController _descriptionController = TextEditingController();
 
-  // Variables to hold edited values
+  // Variables for storing selected values
   DateTime? _startTime;
   DateTime? _endTime;
-  String _selectedPriority = 'Low';
+  String _selectedPriority = 'Mid';
 
-  @override
-  void initState() {
-    super.initState();
-
-    // Initialize controllers with existing event values
-    _eventNameController = TextEditingController(text: widget.event.name);
-    _descriptionController =
-        TextEditingController(text: widget.event.description ?? '');
-
-    // Set initial values for other fields
-    _startTime = widget.event.startTime;
-    _endTime = widget.event.endTime;
-    _selectedPriority = widget.event.priority;
-  }
+  final FirestoreDatabase _firestoreDatabase = FirestoreDatabase();
+  final String uid = AuthService().currentUser!.uid;
 
   @override
   void dispose() {
-    // Dispose controllers when not needed
     _eventNameController.dispose();
     _descriptionController.dispose();
     super.dispose();
@@ -99,21 +77,8 @@ class _EditEventScreenState extends State<EditEventScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Edit Event'),
+        title: const Text('Add New Event'),
         backgroundColor: Colors.blueAccent,
-        actions: [
-          IconButton(
-            onPressed: () async {
-              final delete = await showDeleteDialog(context);
-              if (delete) {
-                widget.onDelete();
-                Navigator.pushNamed(context, homeDashboardNewRoute);
-              }
-            },
-            icon: const Icon(Icons.delete, color: Colors.red),
-            iconSize: 40,
-          )
-        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -125,8 +90,7 @@ class _EditEventScreenState extends State<EditEventScreen> {
             const SizedBox(height: 20),
 
             // Description
-            _buildTextInputField(
-                'Brief Description', Icons.description, _descriptionController),
+            _buildTextInputField('Brief Description', Icons.description, _descriptionController),
             const SizedBox(height: 20),
 
             // Start Time
@@ -148,36 +112,55 @@ class _EditEventScreenState extends State<EditEventScreen> {
             ),
             const SizedBox(height: 10),
             _buildPrioritySelector(),
-            const SizedBox(height: 20),
+            const SizedBox(height: 30),
 
             // Save Button
             Center(
               child: ElevatedButton(
-                onPressed: () {
-                  // Create a new event object with the edited values
-                  final Event updatedEvent = Event.fromSnapshot({
-                    'id': widget.event.id,
-                    'name': _eventNameController.text,
-                    'startTime': _startTime,
-                    'endTime': _endTime,
-                    'priority': _selectedPriority,
-                    'description': _descriptionController.text,
+                onPressed: () async {
+                  final now = DateTime.now();
+                  DateTime? startTimeDate;
+                  DateTime? endTimeDate;
+
+                  if (_startTime != null) {
+                    startTimeDate = DateTime(now.year, now.month, now.day, _startTime!.hour, _startTime!.minute);
+                  }
+
+                  if (_endTime != null) {
+                    endTimeDate = DateTime(now.year, now.month, now.day, _endTime!.hour, _endTime!.minute);
+                  }
+
+                  if (_eventNameController.text.isEmpty) {
+                    await showErrorDialog(context, 'Please enter an event name');
+                    return;
+                  }
+                  // Handle event creation logic here
+                  log('Event Name: ${_eventNameController.text}');
+                  log('Description: ${_descriptionController.text}');
+                  log('Start Time: $startTimeDate');
+                  log('End Time: $endTimeDate');
+                  log('Priority: $_selectedPriority');
+
+                  // Add the event to Firestore (replace with your event creation logic)
+                  _firestoreDatabase.addEvent(uid, {
+                    "name": _eventNameController.text,
+                    "description": _descriptionController.text,
+                    "startTime": startTimeDate,
+                    "endTime": endTimeDate,
+                    "priority": _selectedPriority,
                   });
 
-                  // Call the onSave callback to save the edited event
-                  widget.onSave(updatedEvent);
-                  Navigator.pop(context);
+                  Navigator.of(context).pop(); // Return to previous screen
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.blueAccent,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 50, vertical: 15),
+                  padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 15),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),
                   ),
                 ),
                 child: const Text(
-                  'Save Changes',
+                  'Save Event',
                   style: TextStyle(fontSize: 18),
                 ),
               ),
@@ -189,8 +172,7 @@ class _EditEventScreenState extends State<EditEventScreen> {
   }
 
   // Text Input Field Widget
-  Widget _buildTextInputField(
-      String hint, IconData icon, TextEditingController controller) {
+  Widget _buildTextInputField(String hint, IconData icon, TextEditingController controller) {
     return TextField(
       controller: controller,
       decoration: InputDecoration(
@@ -206,7 +188,7 @@ class _EditEventScreenState extends State<EditEventScreen> {
     );
   }
 
-  // Update the Time Picker widget to use the new date and time selection
+  // Time Picker Widget
   Widget _buildTimePicker(String label, DateTime? dateTime, int field) {
     return GestureDetector(
       onTap: () => _selectDateTime(context, field),

@@ -36,5 +36,12 @@ jobs:
     - name: Install dependencies
       run: flutter pub get
 
+    - name: Install Firebase Core
+      run: flutter pub add firebase_core
+    
+    - name: Install Firebase Auth
+      run: flutter pub add firebase_auth
+    
+
     - name: Run tests
       run: flutter test

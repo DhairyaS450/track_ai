@@ -19,17 +19,22 @@ jobs:
     - name: Install Flutter SDK
       uses: subosito/flutter-action@v2
       with:
-        flutter-version: '3.24.0' # Specify your Flutter version
+        flutter-version: '3.13.0'
+
+    - name: Create Firebase config file for Android
+      run: echo "${{ secrets.ANDROID_FIREBASE_CONFIG }}" > android/app/google-services.json
+      shell: bash
+
+    - name: Create Firebase config file for iOS
+      run: echo "${{ secrets.IOS_FIREBASE_CONFIG }}" > ios/Runner/GoogleService-Info.plist
+      shell: bash
+    
+    - name: Create Firebase options file
+      run: echo "${{ secrets.FIREBASE_OPTIONS }}" > lib/firebase_options.dart
+      shell: bash
 
     - name: Install dependencies
       run: flutter pub get
 
     - name: Run tests
       run: flutter test
-
-    # Uncomment the following lines if you want to build the project as well
-    # - name: Build APK
-    #   run: flutter build apk --release
-
-    # - name: Build iOS
-    #   run: flutter build ios --release --no-codesign

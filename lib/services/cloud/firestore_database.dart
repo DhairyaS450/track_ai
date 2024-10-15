@@ -272,6 +272,11 @@ class FirestoreDatabase {
       // Delete the task document
       await taskRef.delete();
       log("Task deleted successfully.");
+
+      // Update the user info
+      await _usersCollection.doc(userId).update({
+        'tasks': FieldValue.arrayRemove([taskRef])
+      });
     } catch (e) {
       log("Error deleting task: $e");
       if (e is FirebaseException) {
@@ -379,6 +384,11 @@ class FirestoreDatabase {
         log("Event with ID $eventId not found.");
         return;
       }
+
+      // Update the user info
+      await _usersCollection.doc(userId).update({
+        'events': FieldValue.arrayRemove([eventRef])
+      });
 
       // Delete the event document
       await eventRef.delete();

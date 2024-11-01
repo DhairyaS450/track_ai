@@ -44,3 +44,4 @@ app.*.map.json
 
 # API Configurations
 google-services.json
+firebase_options.dart

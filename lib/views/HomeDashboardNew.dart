@@ -21,9 +21,15 @@ class _HomeDashboardNewState extends State<HomeDashboardNew> {
   Widget build(BuildContext context) {
     return Scaffold(
         appBar: AppBar(
-          title: const Text('Track AI'),
-          backgroundColor: Colors.blueAccent,
-        ),
+            title: const Text('Track AI'),
+            backgroundColor: Colors.blueAccent,
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.settings, size: 40),
+                onPressed: () =>
+                    Navigator.of(context).pushNamed(settingsScreenRoute),
+              )
+            ]),
         body: StreamBuilder<List<Task>>(
             stream: _firestoreDatabase.taskStream(uid),
             builder: (context, snapshot) {
@@ -37,8 +43,17 @@ class _HomeDashboardNewState extends State<HomeDashboardNew> {
                 return Center(child: Text('Error: ${snapshot.error}'));
               }
 
+              final now = DateTime.now();
               // Extract tasks from snapshot
-              List<Task> todaysTasks = snapshot.data!;
+              List<Task> todaysTasks = snapshot.data!
+                  .where((task) =>
+                      (
+                        task.startTime?.day,
+                        task.startTime?.month,
+                        task.startTime?.year
+                      ) ==
+                      (now.day, now.month, now.year) || task.startTime == null)
+                  .toList();
 
               return GestureDetector(
                 // onHorizontalDragUpdate: (details) {
@@ -211,7 +226,8 @@ class _HomeDashboardNewState extends State<HomeDashboardNew> {
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
-                          color: task.isCompleted ? Colors.green : Colors.black87,
+                          color:
+                              task.isCompleted ? Colors.green : Colors.black87,
                         ),
                       ),
                     ),

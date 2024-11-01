@@ -64,6 +64,8 @@ class DefaultFirebaseOptions {
     messagingSenderId: '519011897064',
     projectId: 'track-ai-app',
     storageBucket: 'track-ai-app.appspot.com',
+    androidClientId: '519011897064-a8m9p3ursm3qlp4105uvvrt7np07jp11.apps.googleusercontent.com',
+    iosClientId: '519011897064-45sujj05uklbckpf75ibsvg91745op7q.apps.googleusercontent.com',
     iosBundleId: 'com.app.trackAI',
   );
 
@@ -73,6 +75,8 @@ class DefaultFirebaseOptions {
     messagingSenderId: '519011897064',
     projectId: 'track-ai-app',
     storageBucket: 'track-ai-app.appspot.com',
+    androidClientId: '519011897064-a8m9p3ursm3qlp4105uvvrt7np07jp11.apps.googleusercontent.com',
+    iosClientId: '519011897064-jku9tb3phikv3g0dsv2ltli5pv1944vv.apps.googleusercontent.com',
     iosBundleId: 'com.example.trackAi',
   );
 
@@ -85,4 +89,5 @@ class DefaultFirebaseOptions {
     storageBucket: 'track-ai-app.appspot.com',
     measurementId: 'G-XGX4TT49LY',
   );
+
 }

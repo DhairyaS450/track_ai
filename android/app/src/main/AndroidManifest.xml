@@ -1,4 +1,4 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.app.trackAI">
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
@@ -16,7 +16,7 @@
         <!-- Include the OAuth 2.0 Client ID from Google Cloud Console -->
         <meta-data
             android:name="com.google.android.gms.cast.framework.OPTIONS_PROVIDER_CLASS_NAME"
-            android:value="253869499795-8oscha9pkl5ec2hn87kpfu3k1d3h9cnm.apps.googleusercontent.com" />
+            android:value="519011897064-n5u9pc80f9ld7n6l1bcn07gdf97gb80s.apps.googleusercontent.com" />
 
         <!-- Main activity configuration -->
         <activity

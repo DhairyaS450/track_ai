@@ -11,7 +11,9 @@ class GoogleSignInService {
 
   Future<GoogleSignInAccount?> signInWithGoogle() async {
     try {
-      return await _googleSignIn.signIn();
+      final googleAccount = await _googleSignIn.signIn();
+      log(googleAccount!.email);
+      return googleAccount;
     } catch (error) {
       log(error.toString());
       return null;

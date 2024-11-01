@@ -56,6 +56,16 @@ class FirestoreDatabase {
     }
   }
 
+  // Method to update user information on Firestore by userId
+  Future<void> updateUserInfo(String userId, Map<String, dynamic> data) async {
+    try {
+      // Update the fields provided
+      await _usersCollection.doc(userId).update(data);
+    } catch (e) {
+      log("Error updating user: $e");
+    }
+  }
+
   Future<List<Task>> fetchTasksFromFirestore(String userId) async {
     try {
       // Fetch user info to get the task references

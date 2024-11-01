@@ -1,4 +1,4 @@
-package com.example.track_ai
+package com.app.trackAI
 
 import io.flutter.embedding.android.FlutterActivity
 

@@ -15,7 +15,7 @@ class CalendarService {
         AccessToken(
           'Bearer',
           authHeaders['Authorization']!.split(' ')[1],
-          DateTime.now().add(const Duration(hours: 1)),
+          DateTime.now().add(const Duration(hours: 1)).toUtc(),
         ),
         null,
         ['https://www.googleapis.com/auth/calendar'],

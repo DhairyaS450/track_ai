@@ -44,6 +44,7 @@ dependencies:
   googleapis_auth: ^1.6.0
   flutter_secure_storage: ^9.2.2
   http: ^1.2.2
+  rxdart: ^0.28.0
 
 dev_dependencies:
   flutter_test:

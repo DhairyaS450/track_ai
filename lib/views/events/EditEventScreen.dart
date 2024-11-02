@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:track_ai/constants/routes.dart';
 import 'package:track_ai/services/cloud/firestore_database.dart';
 import 'package:track_ai/utilities/dialogs/delete_dialog.dart';
+import 'package:track_ai/utilities/dialogs/error_dialog.dart';
 
 class EditEventScreen extends StatefulWidget {
   final Event event;
@@ -153,7 +154,22 @@ class _EditEventScreenState extends State<EditEventScreen> {
             // Save Button
             Center(
               child: ElevatedButton(
-                onPressed: () {
+                onPressed: () async {
+                  if (_startTime == null) {
+                    await showErrorDialog(context, 'Please enter valid start time');
+                    return;
+                  }
+
+                  if (_endTime == null) {
+                    await showErrorDialog(context, 'Please enter valid end time');
+                    return;
+                  }
+
+                  if (_endTime!.difference(_startTime!).inMinutes < 30) {
+                      await showErrorDialog(context, 'Difference between start time and end time must be at least 30 minutes');
+                      return;
+                  }
+
                   // Create a new event object with the edited values
                   final Event updatedEvent = Event.fromSnapshot({
                     'id': widget.event.id,

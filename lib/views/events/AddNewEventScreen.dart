@@ -124,10 +124,20 @@ class _AddNewEventScreenState extends State<AddNewEventScreen> {
 
                   if (_startTime != null) {
                     startTimeDate = DateTime(now.year, now.month, now.day, _startTime!.hour, _startTime!.minute);
+                  } else {
+                    await showErrorDialog(context, 'Must enter valid start time');
+                    return;
                   }
 
                   if (_endTime != null) {
                     endTimeDate = DateTime(now.year, now.month, now.day, _endTime!.hour, _endTime!.minute);
+                    if (endTimeDate.difference(startTimeDate).inMinutes < 30) {
+                      await showErrorDialog(context, 'Difference between start time and end time must be at least 30 minutes');
+                      return;
+                    }
+                  } else {
+                    await showErrorDialog(context, 'Must enter valid end time');
+                    return;
                   }
 
                   if (_eventNameController.text.isEmpty) {
